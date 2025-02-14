@@ -1,0 +1,309 @@
+import pygame
+import os
+from random import randrange
+
+pygame.init()
+
+largura = 1224
+altura = 620
+
+tela = pygame.display.set_mode((largura, altura))
+pygame.display.set_caption("hordas")
+
+num_inimigos = 3
+
+vel_jogador = 10
+vel_inimigo = 2
+
+diretorio_principal = os.path.dirname(__file__)
+diretorio_imagens = os.path.join(diretorio_principal, 'sprite')
+
+sprite_sheet_parado = pygame.image.load(os.path.join(diretorio_imagens, 'WarriorDownIdle.png'))
+sprite_sheet_movimento_baixo = pygame.image.load(os.path.join(diretorio_imagens, 'WarriorDownWalk.png'))
+sprite_sheet_inimigos = pygame.image.load(os.path.join(diretorio_imagens, 'slime spritesheet calciumtrice.png'))
+sprite_sheet_movimento_cima =pygame.image.load(os.path.join(diretorio_imagens, 'WarriorUpWalk.png'))
+sprite_sheet_movimento_direita = pygame.image.load(os.path.join(diretorio_imagens, 'WarriorRightWalk.png'))
+sprite_sheet_movimento_esquerda = pygame.image.load(os.path.join(diretorio_imagens, 'WarriorLeftWalk.png'))
+sprite_sheet_atack_esquerda = pygame.image.load(os.path.join(diretorio_imagens,'WarriorLeftAttack01.png'))
+sprite_sheet_atack_direita = pygame.image.load(os.path.join(diretorio_imagens,'WarriorRightAttack01.png'))
+sprite_sheet_atack_cima = pygame.image.load(os.path.join(diretorio_imagens,'WarriorUpAttack01.png'))
+sprite_sheet_atack_baixo =pygame.image.load(os.path.join(diretorio_imagens,'WarriorDownAttack01.png'))
+
+imagen_fundo = pygame.image.load(os.path.join(diretorio_imagens, "istockphoto-1334677974-612x612.jpg"))
+imagen_fundo = pygame.transform.scale(imagen_fundo, (612 * 2, 310 * 2))
+
+def exibe_mensagem(msg, tamanho, cor):
+    fonte = pygame.font.SysFont('comicsansms', tamanho, True, False)
+    mensagem = f'{msg}' 
+    texto_formatado = fonte.render(mensagem, True, cor)
+    return texto_formatado
+def reiniciar_jogo():
+    global num_inimigos, Jogador
+    num_inimigos = 3
+    Jogador = jogador() 
+    jogador_grupo.add(Jogador)
+    inimigos_grupo.empty()  
+    for i in range(num_inimigos):
+        novo_inimigo = inimigos()
+        inimigos_grupo.add(novo_inimigo)
+class jogador(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.imagens_parado = []
+        for i in range(4):
+            img = sprite_sheet_parado.subsurface((i * 48, 0), (48, 48))
+            img = pygame.transform.scale(img, (48 * 2, 48 * 2)) 
+            self.imagens_parado.append(img)
+
+        self.imagens_movimento_baixo = []
+        for i in range(8):
+            img = sprite_sheet_movimento_baixo.subsurface((i * 48, 0), (48, 48))
+            img = pygame.transform.scale(img,(48*2,48*2))
+            self.imagens_movimento_baixo.append(img)
+
+        self.imagens_movimento_cima = []
+        for i in range(8):
+            img = sprite_sheet_movimento_cima.subsurface((i * 48, 0), (48, 48))
+            img = pygame.transform.scale(img,(48*2,48*2))
+            self.imagens_movimento_cima.append(img)
+
+        self.imagens_movimento_direita = []
+        for i in range(8):
+            img = sprite_sheet_movimento_direita.subsurface((i * 48, 0), (48, 48))
+            img = pygame.transform.scale(img,(48*2,48*2))
+            self.imagens_movimento_direita.append(img)
+
+        self.imagens_movimento_esquerda = []
+        for i in range(8):
+            img = sprite_sheet_movimento_esquerda.subsurface((i * 48, 0), (48, 48))
+            img = pygame.transform.scale(img,(48*2,48*2))
+            self.imagens_movimento_esquerda.append(img)
+
+        self.imagens_atack_esquerda = []
+        for i in range(6):
+            img = sprite_sheet_atack_esquerda.subsurface((i * 48, 0), (48, 48))
+            img = pygame.transform.scale(img,(48*2,48*2))
+            self.imagens_atack_esquerda.append(img)
+
+        self.imagens_atack_direita = []
+        for i in range(6):
+            img = sprite_sheet_atack_direita.subsurface((i * 48, 0), (48, 48))
+            img = pygame.transform.scale(img,(48*2,48*2))
+            self.imagens_atack_direita.append(img)
+
+        self.imagens_atack_cima = []
+        for i in range(6):
+            img = sprite_sheet_atack_cima.subsurface((i * 48, 0), (48, 48))
+            img = pygame.transform.scale(img,(48*2,48*2))
+            self.imagens_atack_cima.append(img)
+
+        self.imagens_atack_baixo = []
+        for i in range(6):
+            img = sprite_sheet_atack_baixo.subsurface((i * 48, 0), (48, 48))
+            img = pygame.transform.scale(img,(48*2,48*2))
+            self.imagens_atack_baixo.append(img)
+
+        self.index_parado = 0
+        self.index_movimento_baixo = 0
+        self.index_movimento_cima = 0
+        self.index_movimento_direita = 0
+        self.index_movimento_esquerda = 0
+        self.index_atack_esquerda = 0
+        self.index_atack_baixo = 0
+        self.index_atack_cima = 0
+        self.index_atack_direita = 0
+        self.image = self.imagens_parado[self.index_parado]
+        self.rect = self.image.get_rect()
+        self.rect.width = 16  
+        self.rect.height = 36
+        self.rect.center = (largura//2,altura//2)
+
+        self.atacando = False
+        self.vida = 100
+    def receber_dano_player(self, dano):
+        self.vida -= dano
+        if self.vida <= 0:
+            self.kill()
+
+    def update(self):
+        teclas = pygame.key.get_pressed()
+        if self.index_parado > 2:
+            self.index_parado = 0
+        self.index_parado += 0.5
+        self.image = self.imagens_parado[int(self.index_parado)]
+        if teclas[pygame.K_z]:
+                self.index_atack_baixo += 1
+                if self.index_atack_baixo > 3:
+                    self.index_atack_baixo = 0
+                self.image = self.imagens_atack_baixo[int(self.index_atack_baixo)]
+
+        if teclas[pygame.K_z]:
+            self.atacando = True
+            self.rect.width = 48*2
+            self.rect.height = 48*2
+        else:
+            self.atacando = False
+            self.rect.width = 16  
+            self.rect.height = 36
+
+        if teclas[pygame.K_a]:
+            self.rect.x -= vel_jogador
+            self.index_movimento_esquerda += 0.5
+            if self.index_movimento_esquerda > 7:
+                self.index_movimento_esquerda = 0
+            self.image = self.imagens_movimento_esquerda[int(self.index_movimento_esquerda)]
+            if teclas[pygame.K_z]:
+                self.index_atack_esquerda += 1
+                if self.index_atack_esquerda > 3:
+                    self.index_atack_esquerda = 0
+                self.image = self.imagens_atack_esquerda[int(self.index_atack_esquerda)]
+        if teclas[pygame.K_d]:
+            self.rect.x += vel_jogador
+            self.index_movimento_direita += 0.5
+            if self.index_movimento_direita > 7:
+                self.index_movimento_direita = 0
+            self.image = self.imagens_movimento_direita[int(self.index_movimento_direita)]
+            if teclas[pygame.K_z]:
+                self.index_atack_direita += 1
+                if self.index_atack_direita > 3:
+                    self.index_atack_direita = 0
+                self.image = self.imagens_atack_direita[int(self.index_atack_direita)]
+        
+        if teclas[pygame.K_w]:
+            self.rect.y -= vel_jogador
+            self.index_movimento_cima += 0.5
+            if self.index_movimento_cima > 7:
+                self.index_movimento_cima = 0
+            self.image = self.imagens_movimento_cima[int(self.index_movimento_cima)]
+            if teclas[pygame.K_z]:
+                self.index_atack_cima += 1
+                if self.index_atack_cima > 3:
+                    self.index_atack_cima = 0
+                self.image = self.imagens_atack_cima[int(self.index_atack_cima)]
+        if teclas[pygame.K_s]:
+            self.rect.y += vel_jogador
+            self.index_movimento_baixo += 1
+            if self.index_movimento_baixo > 7:
+                self.index_movimento_baixo = 0
+            self.image = self.imagens_movimento_baixo[int(self.index_movimento_baixo)]
+            if teclas[pygame.K_z]:
+                self.index_atack_baixo += 1
+                if self.index_atack_baixo > 3:
+                    self.index_atack_baixo = 0
+                self.image = self.imagens_atack_baixo[int(self.index_atack_baixo)]
+
+        if self.atacando:
+            for novo_inimigo in inimigos_grupo:
+                if self.rect.colliderect(novo_inimigo.rect):
+                    novo_inimigo.receber_dano_inimigo(1)
+        
+
+class inimigos (pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.imagens_inimigos = []
+        for i in range(8):
+            img = sprite_sheet_inimigos.subsurface((i * 32, 0), (32, 32))
+            img = pygame.transform.scale(img, (32 * 3, 32 * 3))
+            self.imagens_inimigos.append(img)
+
+        self.vida_inimigo = 5
+        self.index_lista = 0
+        self.image = self.imagens_inimigos[self.index_lista]
+        self.rect = self.image.get_rect()
+        self.rect.width = 20*2
+        self.rect.height = 20*2
+        self.rect.center = self.image.get_rect().center
+        
+        if not self.rect.colliderect(Jogador.rect):
+            self.rect.x = randrange(10, 1000,100)
+            self.rect.y = randrange(10, 600,100)
+
+    def receber_dano_inimigo(self, dano):
+        self.vida_inimigo -= dano
+        if self.vida_inimigo <= 0:
+            self.kill()
+
+
+    def update(self):
+        if self.index_lista >= 7:
+            self.index_lista = 0
+        self.index_lista += 1
+        self.image = self.imagens_inimigos[int(self.index_lista)]
+
+        distancia_x = Jogador.rect.x - self.rect.x
+        distancia_y = Jogador.rect.y - self.rect.y
+
+        if distancia_x > 0:
+            self.rect.x += min(vel_inimigo, distancia_x)
+        elif distancia_x < 0:
+            self.rect.x -= min(vel_inimigo, -distancia_x)
+        if distancia_y > 0:
+            self.rect.y += min(vel_inimigo, distancia_y)
+        elif distancia_y < 0:
+            self.rect.y -= min(vel_inimigo, -distancia_y)
+
+
+        if self.rect.colliderect(Jogador.rect) and Jogador.atacando:
+            if distancia_x > 0:
+                self.rect.x -= 10
+            elif distancia_x < 0:
+                self.rect.x += 10
+            if distancia_y > 0:
+                self.rect.y -= 10
+            elif distancia_y < 0:
+                self.rect.y += 10
+        for jogador in jogador_grupo:
+            if self.rect.colliderect(Jogador.rect):
+                Jogador.receber_dano_player(1)
+                
+
+
+jogador_grupo = pygame.sprite.Group()
+inimigos_grupo = pygame.sprite.Group()
+Jogador = jogador()
+jogador_grupo.add(Jogador)
+
+for i in range(num_inimigos):
+    novo_inimigo = inimigos()
+    inimigos_grupo.add(novo_inimigo)
+
+loop = True
+fps = pygame.time.Clock()
+while loop:
+    fps.tick(20)
+    for events in pygame.event.get():
+        if events.type == pygame.QUIT:
+            loop = False
+
+    tela.blit(imagen_fundo, (0, 0))
+    jogador_grupo.draw(tela)
+    inimigos_grupo.draw(tela)
+    jogador_grupo.update()
+    inimigos_grupo.update()
+
+    teclas = pygame.key.get_pressed()
+    texto_vida = exibe_mensagem(f"{Jogador.vida}%",40,(255,0,0))
+    tela.blit(texto_vida, (10, 10))
+
+    if Jogador.vida == 0:
+        game_over = exibe_mensagem('GAME OVER', 40, (0,0,0))
+        tela.blit(game_over, (470, 200))
+        restart = exibe_mensagem('Pressione r para reiniciar', 20, (0,0,0))
+        tela.blit(restart, (470, (200)+60))
+    if teclas[pygame.K_r] and len(jogador_grupo) == 0:
+        reiniciar_jogo()
+
+
+    if len(inimigos_grupo) == 0:
+        num_inimigos += 1
+        for i in range(num_inimigos):
+            inimigo = inimigos()
+            inimigos_grupo.add(inimigo)
+
+
+
+
+    pygame.display.update()
+
+pygame.quit()
